@@ -137,6 +137,11 @@ export class NgSelectComponent implements OnDestroy, OnChanges, AfterViewInit, C
         this._clearSearchOnAdd = value;
     };
 
+    @Input()
+    get useSelectedAsSearch() { return isDefined(this._useSelectedAsSearch) ? this._useSelectedAsSearch : false; };
+    set useSelectedAsSearch(value) {
+        this._useSelectedAsSearch = value;
+    };
     // output events
     @Output('blur') blurEvent = new EventEmitter();
     @Output('focus') focusEvent = new EventEmitter();
@@ -185,6 +190,7 @@ export class NgSelectComponent implements OnDestroy, OnChanges, AfterViewInit, C
     private _pressedKeys: string[] = [];
     private _compareWith: CompareWithFn;
     private _clearSearchOnAdd: boolean;
+    private _useSelectedAsSearch: boolean;
 
     private readonly _destroy$ = new Subject<void>();
     private readonly _keyPress$ = new Subject<string>();
@@ -385,6 +391,11 @@ export class NgSelectComponent implements OnDestroy, OnChanges, AfterViewInit, C
         }
         this.isOpen = true;
         this.itemsList.markSelectedOrDefault(this.markFirst);
+
+        if (this.useSelectedAsSearch && this.selectedItems.length > 0) {
+            this.filterValue = this.selectedItems[0].label;
+        }
+
         this.openEvent.emit();
         if (!this.filterValue) {
             this.focus();
@@ -397,7 +408,9 @@ export class NgSelectComponent implements OnDestroy, OnChanges, AfterViewInit, C
             return;
         }
         this.isOpen = false;
-        this._clearSearch();
+        if (!this.useSelectedAsSearch) {
+            this._clearSearch();
+        }
         this._onTouched();
         this.closeEvent.emit();
         this._cd.markForCheck();
@@ -418,7 +431,7 @@ export class NgSelectComponent implements OnDestroy, OnChanges, AfterViewInit, C
     select(item: NgOption) {
         if (!item.selected) {
             this.itemsList.select(item);
-            if (this.clearSearchOnAdd) {
+            if (this.clearSearchOnAdd && !this.useSelectedAsSearch) {
                 this._clearSearch();
             }
 
@@ -426,6 +439,11 @@ export class NgSelectComponent implements OnDestroy, OnChanges, AfterViewInit, C
                 this.addEvent.emit(item.value);
             }
             this._updateNgModel();
+        }
+
+        if (!this.multiple) {
+            this.filterValue = item.label;
+            console.log(item, this);
         }
 
         if (this.closeOnSelect || this.itemsList.noItemsToSelect) {
